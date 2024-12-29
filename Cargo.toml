@@ -1,0 +1,9 @@
+[package]
+name = "keyboard_tests"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+inputbot = "0.6.0"
+midir = "0.10.1"
+
