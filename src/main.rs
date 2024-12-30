@@ -1,6 +1,8 @@
-use button::{Button, ButtonStroke};
+use button::ButtonStroke;
+use inputbot::KeybdKey;
 use midir::{MidiInput, MidiOutput};
 use std::sync::mpsc::{channel, RecvTimeoutError};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::thread::{self, sleep};
 use std::time::Duration;
 
@@ -10,8 +12,47 @@ mod button;
 
 mod keyboard;
 
+type ButtonCallback = Arc<Mutex<Arc<dyn Fn() + Send + Sync + 'static>>>;
+
+fn new(callback: Arc<dyn Fn() + Send + Sync + 'static>) -> ButtonCallback {
+    Arc::new(Mutex::new(callback))
+}
+
+#[rustfmt::skip]
+fn blank_binds() -> [ButtonCallback; 80] {
+    [
+        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
+        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
+        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
+        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
+        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
+        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
+        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
+        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
+        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
+    ]
+}
+
+pub(crate) static LAUCHPAD_MK2_BOARD_BINDS: LazyLock<([ButtonCallback; 80], [ButtonCallback; 80])> = LazyLock::new(|| (blank_binds(), blank_binds()));
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("STARTING MAIN FOR THE FIRST TIME");
+
+    const MUTE_INDEX: usize = 61;
+    *LAUCHPAD_MK2_BOARD_BINDS.0[MUTE_INDEX]
+        .lock()
+        .unwrap() = Arc::new(|| {
+            println!("PRESSING a");
+            KeybdKey::AKey.press();
+        });
+    
+    *LAUCHPAD_MK2_BOARD_BINDS.1[MUTE_INDEX]
+        .lock()
+        .unwrap() = Arc::new(|| {
+            println!("RELEASING a");
+            KeybdKey::AKey.release();
+        });
+    
 
     'main: loop {
     // Create a MIDI input object
@@ -62,7 +103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         move |timestamp, message, _| {
             let button_stroke = ButtonStroke::from([message[0], message[1], message[2]]);
             println!(
-                "{}: {:?} ({} bytes): BUTTON {:?}",
+                "{}: {:?} ({} bytes): BUTTON {:?} || index: {}",
                 timestamp,
                 message,
                 message.len(),
@@ -70,15 +111,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     format!("{:?}", button_stroke)
                 } else {
                     "UNKNOWN".to_string()
-                }
+                },
+                button_stroke.unwrap().index()
             );
 
-            if let ButtonStroke::Press(Button::Mute) = button_stroke {
-                println!("PRESSTING A");
-                inputbot::KeybdKey::AKey.press();
-            } else if let ButtonStroke::Release(Button::Mute) = button_stroke {
-                println!("UNPRESSTING A");
-                inputbot::KeybdKey::AKey.release();
+            match button_stroke {
+                ButtonStroke::Press(button) => LAUCHPAD_MK2_BOARD_BINDS.0[button.index()].lock().unwrap()(),
+                ButtonStroke::Release(button) => LAUCHPAD_MK2_BOARD_BINDS.1[button.index()].lock().unwrap()(),
             }
 
             let data = match button_stroke {

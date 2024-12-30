@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Button {
     Up,
     Down,
@@ -61,9 +61,36 @@ impl Button {
             Button::Grid(row, col) => 10*row + col,
         }
     }
+
+    pub fn index(&self) -> usize {
+        match self {
+            Button::Up => 0,
+            Button::Down => 1,
+            Button::Left => 2,
+            Button::Right => 3,
+            Button::Session => 4,
+            Button::User1 => 5,
+            Button::User2 => 6,
+            Button::Mixer => 7,
+            Button::Volume => 16,
+            Button::Pan => 25,
+            Button::SendA => 34,
+            Button::SendB => 43,
+            Button::Stop => 52,
+            Button::Mute => 61,
+            Button::Solo => 70,
+            Button::RecordArm => 79,
+            Button::Grid(row, col) => {
+                let offset = 8;
+                let row_index = -((*row as i32) - 8) as usize;
+                let col_index = (*col - 1) as usize;
+                offset + (row_index * 9) + col_index
+            },
+        }
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum ButtonStroke {
     Press(Button),
     Release(Button),
@@ -118,6 +145,15 @@ impl From<[u8; 3]> for ButtonStroke {
         match pressed {
             true => Self::Press(button),
             false => Self::Release(button),
+        }
+    }
+}
+
+impl ButtonStroke {
+    pub fn unwrap(self) -> Button {
+        match self {
+            ButtonStroke::Press(button) => button,
+            ButtonStroke::Release(button) => button,
         }
     }
 }
