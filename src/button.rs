@@ -18,7 +18,7 @@ pub enum Button {
     Solo,
     RecordArm,
 
-    Grid(u8, u8)
+    Grid(u8, u8),
 }
 
 impl Button {
@@ -58,7 +58,7 @@ impl Button {
             Button::Mute => Button::MUTE,
             Button::Solo => Button::SOLO,
             Button::RecordArm => Button::RECORD_ARM,
-            Button::Grid(row, col) => 10*row + col,
+            Button::Grid(row, col) => 10 * row + col,
         }
     }
 
@@ -85,7 +85,7 @@ impl Button {
                 let row_index = -((*row as i32) - 8) as usize;
                 let col_index = (*col - 1) as usize;
                 offset + (row_index * 9) + col_index
-            },
+            }
         }
     }
 }
@@ -113,7 +113,7 @@ impl From<[u8; 3]> for ButtonStroke {
                     Button::USER1 => User1,
                     Button::USER2 => User2,
                     Button::MIXER => Mixer,
-                    _ => unimplemented!()
+                    _ => unimplemented!(),
                 };
 
                 (button, press != 0)
@@ -123,23 +123,25 @@ impl From<[u8; 3]> for ButtonStroke {
                 let col = button % 10;
 
                 use Button::*;
-                let button = if col == 9 {match button {
-                    Button::VOLUME => Volume,
-                    Button::PAN => Pan,
-                    Button::SENDA => SendA,
-                    Button::SENDB => SendB,
-                    Button::STOP => Stop,
-                    Button::MUTE => Mute,
-                    Button::SOLO => Solo,
-                    Button::RECORD_ARM => RecordArm,
-                    _ => unimplemented!()
-                }} else {
+                let button = if col == 9 {
+                    match button {
+                        Button::VOLUME => Volume,
+                        Button::PAN => Pan,
+                        Button::SENDA => SendA,
+                        Button::SENDB => SendB,
+                        Button::STOP => Stop,
+                        Button::MUTE => Mute,
+                        Button::SOLO => Solo,
+                        Button::RECORD_ARM => RecordArm,
+                        _ => unimplemented!(),
+                    }
+                } else {
                     Grid(row, col)
                 };
 
                 (button, press != 0)
             }
-            _ => todo!()
+            _ => todo!(),
         };
 
         match pressed {
