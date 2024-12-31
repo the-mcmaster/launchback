@@ -1,3 +1,7 @@
+use std::sync::Arc;
+
+use crate::LAUCHPAD_MK2_BOARD_BINDS;
+
 #[derive(Debug, Clone, Copy)]
 pub enum Button {
     Up,
@@ -152,10 +156,11 @@ impl From<[u8; 3]> for ButtonStroke {
 }
 
 impl ButtonStroke {
-    pub fn unwrap(self) -> Button {
+
+    pub fn bind<T: Fn() + Send + Sync + 'static>(self, callback: T) {
         match self {
-            ButtonStroke::Press(button) => button,
-            ButtonStroke::Release(button) => button,
+            ButtonStroke::Press(button) => *LAUCHPAD_MK2_BOARD_BINDS.0[button.index()].lock().unwrap() = Arc::new(callback),
+            ButtonStroke::Release(button) => *LAUCHPAD_MK2_BOARD_BINDS.1[button.index()].lock().unwrap() = Arc::new(callback),
         }
     }
 }

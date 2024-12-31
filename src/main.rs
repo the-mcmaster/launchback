@@ -1,5 +1,4 @@
 use button::ButtonStroke;
-use inputbot::KeybdKey;
 use midir::{MidiInput, MidiOutput};
 use std::sync::mpsc::{channel, RecvTimeoutError};
 use std::sync::{Arc, LazyLock, Mutex};
@@ -37,19 +36,9 @@ pub(crate) static LAUCHPAD_MK2_BOARD_BINDS: LazyLock<([ButtonCallback; 80], [But
     LazyLock::new(|| (blank_binds(), blank_binds()));
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("STARTING MAIN FOR THE FIRST TIME");
-
-    const MUTE_INDEX: usize = 61;
-    *LAUCHPAD_MK2_BOARD_BINDS.0[MUTE_INDEX].lock().unwrap() = Arc::new(|| {
-        println!("PRESSING a");
-        KeybdKey::AKey.press();
-    });
-
-    *LAUCHPAD_MK2_BOARD_BINDS.1[MUTE_INDEX].lock().unwrap() = Arc::new(|| {
-        println!("RELEASING a");
-        KeybdKey::AKey.release();
-    });
-
+    
+    keyboard::pre_initialization();
+    
     'main: loop {
         // Create a MIDI input object
         let midi_in = MidiInput::new("MIDI Input")?;
@@ -84,15 +73,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .collect::<Vec<_>>();
 
         if devices.is_empty() || out_devices.is_empty() {
-            println!("No MIDI devices found. Please connect your Launchpad MK2.");
+            /* println!("No MIDI devices found. Please connect your Launchpad MK2."); */
             sleep(Duration::from_secs(1));
             continue 'main;
         }
 
         let port = &devices[0]; // Assuming the first port is the Launchpad MK2
         let out_port = &out_devices[0];
-        println!("Using MIDI port: {}", midi_in.port_name(port)?);
-        println!("Using MIDI port: {}", midi_out.port_name(out_port)?);
+        /* println!("Using MIDI port: {}", midi_in.port_name(port)?);
+        println!("Using MIDI port: {}", midi_out.port_name(out_port)?); */
 
         // Channel to monitor disconnection events
         let (midi_conns_tx, midi_conns_rx) = channel::<()>();
@@ -106,20 +95,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let _conn_in = midi_in.connect(
             port,
             "midir-read-input",
-            move |timestamp, message, _| {
+            move |_timestamp, message, _| {
                 let button_stroke = ButtonStroke::from([message[0], message[1], message[2]]);
-                println!(
-                    "{}: {:?} ({} bytes): BUTTON {:?} || index: {}",
-                    timestamp,
-                    message,
-                    message.len(),
-                    if message.len() == 3 {
-                        format!("{:?}", button_stroke)
-                    } else {
-                        "UNKNOWN".to_string()
-                    },
-                    button_stroke.unwrap().index()
-                );
 
                 match button_stroke {
                     ButtonStroke::Press(button) => {
@@ -159,15 +136,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Handle disconnection event
             match midi_conns_rx.recv_timeout(Duration::from_millis(150)) {
                 Ok(_device_disconnect) => {
-                    println!("MIDI device disconnected. Reseting...");
                     continue 'main;
                 }
                 Err(RecvTimeoutError::Timeout) => {
-                    println!("Retting Mainloop...");
                     continue 'main_loop;
                 }
                 Err(RecvTimeoutError::Disconnected) => {
-                    println!("WARN: Disconnection: Sender unexpectedly disconnected. Reseting...");
+                    eprintln!("warn: Midi Monitor's Sender disconnected unexpectedly. Reseting...");
                     continue 'main;
                 }
             }
