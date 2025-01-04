@@ -3,7 +3,17 @@ name = "keyboard_tests"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "launchback_lib"
+path = "src/lib.rs"
+crate-type = ["cdylib", "staticlib"]
+
+[[bin]]
+name = "keyboard_tests"
+path = "src/main.rs"
+
 [dependencies]
+flutter_rust_bridge = "=2.7.0"
 inputbot = "0.6.0"
 midir = "0.10.1"
 

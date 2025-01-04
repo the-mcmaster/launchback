@@ -1,39 +1,7 @@
-use button::ButtonStroke;
+use std::{sync::mpsc::{channel, RecvTimeoutError}, thread::{self, sleep}, time::Duration};
+
+use launchback_lib::keyboard;
 use midir::{MidiInput, MidiOutput};
-use std::sync::mpsc::{channel, RecvTimeoutError};
-use std::sync::{Arc, LazyLock, Mutex};
-use std::thread::{self, sleep};
-use std::time::Duration;
-
-const MK2_NAME: &str = "Launchpad MK2";
-
-mod button;
-
-mod keyboard;
-
-type ButtonCallback = Arc<Mutex<Arc<dyn Fn() + Send + Sync + 'static>>>;
-
-fn new(callback: Arc<dyn Fn() + Send + Sync + 'static>) -> ButtonCallback {
-    Arc::new(Mutex::new(callback))
-}
-
-#[rustfmt::skip]
-fn blank_binds() -> [ButtonCallback; 80] {
-    [
-        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
-        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
-        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
-        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
-        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
-        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
-        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
-        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
-        new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())), new(Arc::new(|| ())),
-    ]
-}
-
-pub(crate) static LAUCHPAD_MK2_BOARD_BINDS: LazyLock<([ButtonCallback; 80], [ButtonCallback; 80])> =
-    LazyLock::new(|| (blank_binds(), blank_binds()));
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     
